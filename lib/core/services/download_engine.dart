@@ -150,7 +150,7 @@ class DownloadEngine {
     return sanitized;
   }
 
-  String? serverUrl = 'http://100.119.111.100:8089';
+  String? serverUrl = 'https://biol-expenses-pipe-beings.trycloudflare.com';
 
   /// Executa o download preferencialmente no Servidor yt-dlp (Tailscale) ou cai de volta para extração local.
   Stream<double> downloadVideo({

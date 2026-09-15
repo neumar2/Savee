@@ -9,3 +9,12 @@ services:
       - "8089:8000"
     environment:
       - PYTHONUNBUFFERED=1
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: savee-tunnel
+    restart: always
+    command: tunnel --url http://savee-backend:8000
+    depends_on:
+      - savee-backend
+

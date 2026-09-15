@@ -51,8 +51,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (savedServerUrl != null && savedServerUrl.isNotEmpty) {
       _downloadEngine.serverUrl = savedServerUrl;
     } else {
-      _downloadEngine.serverUrl = 'http://100.119.111.100:8089';
-      await prefs.setString('server_url', 'http://100.119.111.100:8089');
+      _downloadEngine.serverUrl = 'https://biol-expenses-pipe-beings.trycloudflare.com';
+      await prefs.setString('server_url', 'https://biol-expenses-pipe-beings.trycloudflare.com');
     }
 
     // Carrega as regras dinâmicas do servidor
