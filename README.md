@@ -6,7 +6,7 @@ Um aplicativo moderno feito em Flutter para baixar vídeos e áudios do YouTube 
 
 Se você não quer compilar o código e apenas quer instalar o aplicativo, baixe o arquivo APK já pronto na pasta `Releases_Para_Baixar` deste repositório:
 
-1. 📱 [Baixar APK para Android (Savee_v1.1.apk)](Releases_Para_Baixar/Savee_v1.1.apk)
+1. 📱 [Baixar APK para Android (Savee_v1.2.apk)](Releases_Para_Baixar/Savee_v1.2.apk)
 
 ## 🚀 Funcionalidades Principais
 

@@ -189,9 +189,13 @@ class DownloadEngine {
     client.connectionTimeout = const Duration(seconds: 15);
 
     try {
-      final cleanServerUrl = serverUrl!.endsWith('/') 
-          ? serverUrl!.substring(0, serverUrl!.length - 1) 
-          : serverUrl!;
+      var rawUrl = serverUrl!.trim();
+      if (!rawUrl.startsWith('http://') && !rawUrl.startsWith('https://')) {
+        rawUrl = 'http://$rawUrl';
+      }
+      final cleanServerUrl = rawUrl.endsWith('/') 
+          ? rawUrl.substring(0, rawUrl.length - 1) 
+          : rawUrl;
       final uri = Uri.parse('$cleanServerUrl/api/download');
 
       final request = await client.postUrl(uri);

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/services/download_engine.dart';
 import '../../core/services/sharing_service.dart';
 import '../../core/services/storage_service.dart';
@@ -39,10 +40,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _initializeServices();
   }
 
-  /// Inicializa os serviços assíncronos e escuta por intents de compartilhamento.
+  /// Inicializa os serviços assíncronos, carrega a URL salva e escuta por intents de compartilhamento.
   Future<void> _initializeServices() async {
     await _storageService.init();
     await _loadHistory();
+
+    // Carrega a URL do servidor salva anteriormente no celular
+    final prefs = await SharedPreferences.getInstance();
+    final savedServerUrl = prefs.getString('server_url');
+    if (savedServerUrl != null && savedServerUrl.isNotEmpty) {
+      _downloadEngine.serverUrl = savedServerUrl;
+    }
 
     // Carrega as regras dinâmicas do servidor
     await _downloadEngine.fetchRemoteRules();
@@ -316,7 +324,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             const SizedBox(height: 16),
             Center(
               child: Text(
-                "Savee v1.1.0",
+                "Savee v1.2.0",
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: theme.colorScheme.onSurface,
@@ -408,12 +416,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             child: const Text("Cancelar"),
           ),
           FilledButton(
-            onPressed: () {
+            onPressed: () async {
+              var inputUrl = controller.text.trim();
+              if (inputUrl.isNotEmpty && !inputUrl.startsWith('http://') && !inputUrl.startsWith('https://')) {
+                inputUrl = 'http://$inputUrl';
+              }
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setString('server_url', inputUrl);
               setState(() {
-                _downloadEngine.serverUrl = controller.text.trim();
+                _downloadEngine.serverUrl = inputUrl;
               });
-              Navigator.pop(context);
-              _showSnackBar("URL do Servidor Backend atualizada!");
+              if (mounted) {
+                Navigator.pop(context);
+                _showSnackBar("URL do Servidor salva com sucesso!");
+              }
             },
             child: const Text("Salvar"),
           ),
