@@ -213,7 +213,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       },
       onDone: () async {
         try {
-          _showSnackBar("Download concluído!");
+          final isServerUsed = _downloadEngine.serverUrl != null && _downloadEngine.serverUrl!.isNotEmpty;
+          final modeMsg = isServerUsed ? "via Servidor yt-dlp (Umbrel)" : "via Engine Local";
+          _showSnackBar("Download concluído $modeMsg!");
           _urlController.clear();
         } catch (e) {
           _showSnackBar("Erro: $e");
