@@ -45,11 +45,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     await _storageService.init();
     await _loadHistory();
 
-    // Carrega a URL do servidor salva anteriormente no celular
+    // Carrega a URL do servidor salva anteriormente no celular ou usa o IP padrão do Umbrel
     final prefs = await SharedPreferences.getInstance();
     final savedServerUrl = prefs.getString('server_url');
     if (savedServerUrl != null && savedServerUrl.isNotEmpty) {
       _downloadEngine.serverUrl = savedServerUrl;
+    } else {
+      _downloadEngine.serverUrl = 'http://100.119.111.100:8089';
+      await prefs.setString('server_url', 'http://100.119.111.100:8089');
     }
 
     // Carrega as regras dinâmicas do servidor
@@ -324,7 +327,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             const SizedBox(height: 16),
             Center(
               child: Text(
-                "Savee v1.2.0",
+                "Savee v1.3.0",
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: theme.colorScheme.onSurface,
