@@ -456,11 +456,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.dns_outlined),
-            tooltip: 'Servidor Tailscale (yt-dlp)',
-            onPressed: _showServerSettingsDialog,
-          ),
-          IconButton(
             icon: const Icon(Icons.info_outline),
             tooltip: 'Sobre',
             onPressed: _showAboutDialog,
