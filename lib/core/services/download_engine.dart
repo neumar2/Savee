@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
+import 'storage_service.dart';
 
 /// Modelo para representar as regras de extração dinâmica obtidas do servidor.
 class DownloadRule {
@@ -149,21 +150,98 @@ class DownloadEngine {
     return sanitized;
   }
 
-  /// Executa o download diretamente do dispositivo de forma autônoma.
+  String? serverUrl;
+
+  /// Executa o download preferencialmente no Servidor yt-dlp (Tailscale) ou cai de volta para extração local.
   Stream<double> downloadVideo({
     required String url,
     required String saveDir,
     required String format,
     required String quality,
   }) async* {
-    final platform = detectPlatform(url);
+    if (serverUrl != null && serverUrl!.isNotEmpty) {
+      try {
+        yield* _downloadFromBackend(url, saveDir, format, quality);
+        return;
+      } catch (e) {
+        print("Falha ao usar servidor backend Tailscale: $e. Tentando modo autônomo local.");
+      }
+    }
 
+    final platform = detectPlatform(url);
     if (platform == 'YouTube') {
       yield* _downloadYouTubeSingle(url, saveDir, format, quality);
     } else if (platform == 'TikTok') {
       yield* _downloadTikTok(url, saveDir, format, quality);
     } else {
-      throw Exception("A plataforma $platform não é suportada diretamente no modo autônomo.");
+      throw Exception("A plataforma $platform não é suportada no modo local offline.");
+    }
+  }
+
+  /// Baixa a mídia processada pelo servidor backend Python yt-dlp
+  Stream<double> _downloadFromBackend(
+    String url,
+    String saveDir,
+    String format,
+    String quality,
+  ) async* {
+    final client = HttpClient();
+    client.connectionTimeout = const Duration(seconds: 15);
+
+    try {
+      final cleanServerUrl = serverUrl!.endsWith('/') 
+          ? serverUrl!.substring(0, serverUrl!.length - 1) 
+          : serverUrl!;
+      final uri = Uri.parse('$cleanServerUrl/api/download');
+
+      final request = await client.postUrl(uri);
+      request.headers.contentType = ContentType.json;
+
+      final body = json.encode({
+        'url': url,
+        'format': format,
+        'quality': quality,
+      });
+
+      request.write(body);
+      final response = await request.close();
+
+      if (response.statusCode != HttpStatus.ok) {
+        final errText = await response.transform(utf8.decoder).join();
+        throw Exception("Servidor yt-dlp retornou erro ${response.statusCode}: $errText");
+      }
+
+      // Extrair nome do arquivo do header Content-Disposition se fornecido
+      String fileName = 'media_${DateTime.now().millisecondsSinceEpoch}.${format == 'Audio' ? 'mp3' : 'mp4'}';
+      final disposition = response.headers.value('content-disposition');
+      if (disposition != null && disposition.contains('filename=')) {
+        final match = RegExp(r'filename="?([^";]+)"?').firstMatch(disposition);
+        if (match != null && match.group(1) != null) {
+          fileName = _sanitizeFileName(match.group(1)!);
+        }
+      }
+
+      final filePath = '$saveDir/$fileName';
+      final file = File(filePath);
+      await file.parent.create(recursive: true);
+      final fileSink = file.openWrite();
+
+      final totalSize = response.contentLength > 0 ? response.contentLength : 1024 * 1024 * 10;
+      int downloaded = 0;
+
+      await for (final List<int> chunk in response) {
+        fileSink.add(chunk);
+        downloaded += chunk.length;
+        yield downloaded / totalSize;
+      }
+
+      await fileSink.close();
+      await StorageService.scanFileForGallery(filePath);
+    } catch (e) {
+      print("Erro na conexão com o servidor yt-dlp: $e");
+      rethrow;
+    } finally {
+      client.close();
     }
   }
 
@@ -239,6 +317,7 @@ class DownloadEngine {
       }
 
       await fileSink.close();
+      await StorageService.scanFileForGallery(filePath);
     } catch (e) {
       print("Erro no download do YouTube: $e");
       rethrow;
@@ -311,6 +390,7 @@ class DownloadEngine {
       }
 
       await fileSink.close();
+      await StorageService.scanFileForGallery(filePath);
     } catch (e) {
       print("Erro no download do TikTok: $e");
       rethrow;

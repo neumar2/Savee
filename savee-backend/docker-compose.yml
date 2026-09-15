@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  savee-backend:
+    build: .
+    container_name: savee-backend
+    restart: always
+    ports:
+      - "8089:8000"
+    environment:
+      - PYTHONUNBUFFERED=1

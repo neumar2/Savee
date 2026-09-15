@@ -1,36 +1,62 @@
 import 'dart:io';
+import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
-/// Service folder management
+/// Service folder management & Android MediaScanner integration
 class StorageService {
   Directory? _baseDir;
+  static const _channel = MethodChannel('com.example.savee/media_scanner');
 
-  /// Inicializa o diretório base 'Mídia'.
-  /// Utiliza armazenamento externo no Android (Scoped Storage) e cai de volta para
-  /// o diretório de documentos em outras plataformas.
+  /// Inicializa o diretório base visível publicamente na Galeria e Downloads.
   Future<void> init() async {
     try {
       Directory? rootDir;
       if (Platform.isAndroid) {
-        rootDir = Directory('/storage/emulated/0/Download/Savee');
+        // Usar diretório público de Filmes/Vídeos ou Downloads no Android
+        rootDir = Directory('/storage/emulated/0/Movies/Savee');
       }
-      // Fallback para documentos se não for Android
+      
+      // Fallback para documentos se não for Android ou se o diretório falhar
       rootDir ??= await getApplicationDocumentsDirectory();
 
-      final mediaPath = p.join(rootDir.path, 'Mídia');
-      _baseDir = Directory(mediaPath);
+      _baseDir = rootDir;
 
       if (!await _baseDir!.exists()) {
         await _baseDir!.create(recursive: true);
       }
     } catch (e) {
-      print("Erro ao inicializar db: $e");
+      print("Erro ao inicializar diretório de mídia: $e");
+    }
+  }
+
+  /// Notifica o sistema operacional Android para indexar o arquivo na Galeria de Fotos/Vídeos.
+  static Future<void> scanFileForGallery(String filePath) async {
+    if (!Platform.isAndroid) return;
+    try {
+      await _channel.invokeMethod('scanFile', {'path': filePath});
+      print("MediaScanner acionado com sucesso para: $filePath");
+    } catch (e) {
+      print("Erro ao acionar MediaScanner: $e");
+    }
+  }
+
+  /// Abre um arquivo diretamente no player / galeria nativa do dispositivo.
+  static Future<void> openInGallery(String filePath, {String? mimeType}) async {
+    if (!Platform.isAndroid) return;
+    try {
+      final ext = p.extension(filePath).toLowerCase();
+      final determinedMime = mimeType ?? (ext == '.mp3' || ext == '.m4a' ? 'audio/*' : 'video/*');
+      await _channel.invokeMethod('openFile', {
+        'path': filePath,
+        'mimeType': determinedMime,
+      });
+    } catch (e) {
+      print("Erro ao abrir arquivo nativamente: $e");
     }
   }
 
   /// Retorna o caminho de salvamento baseado na plataforma e no tipo (Vídeo ou MP3).
-  /// Cria as subpastas necessárias caso ainda não existam.
   Future<String> getMediaPath({
     required String platform,
     required String type,
@@ -40,7 +66,6 @@ class StorageService {
       await init();
     }
 
-    // Evitando bugs com diretorios
     final safePlatform = _sanitizePathSegment(platform);
     final safeType = _sanitizePathSegment(type);
 
@@ -79,7 +104,7 @@ class StorageService {
   }
 
   String _sanitizePathSegment(String input) {
-    // Limpa nome da pasta
     return input.replaceAll(RegExp(r'[^\w\-_]'), '').trim();
   }
 }
+

@@ -366,6 +366,60 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
+  /// Exibe diálogo para configurar a URL do servidor yt-dlp privado (Tailscale).
+  void _showServerSettingsDialog() {
+    final controller = TextEditingController(text: _downloadEngine.serverUrl ?? '');
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.dns_rounded),
+            SizedBox(width: 8),
+            Text("Servidor yt-dlp"),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Insira o IP/MagicDNS do seu servidor Tailscale (Umbrel) para extrações em alta velocidade:",
+              style: TextStyle(fontSize: 13),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              decoration: const InputDecoration(
+                hintText: "http://100.x.y.z:8000",
+                labelText: "URL do Servidor Backend",
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.link),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancelar"),
+          ),
+          FilledButton(
+            onPressed: () {
+              setState(() {
+                _downloadEngine.serverUrl = controller.text.trim();
+              });
+              Navigator.pop(context);
+              _showSnackBar("URL do Servidor Backend atualizada!");
+            },
+            child: const Text("Salvar"),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -380,6 +434,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.dns_outlined),
+            tooltip: 'Servidor Tailscale (yt-dlp)',
+            onPressed: _showServerSettingsDialog,
+          ),
           IconButton(
             icon: const Icon(Icons.info_outline),
             tooltip: 'Sobre',
@@ -440,14 +499,44 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   onDeleteItem: _deleteFile,
                   onItemPressed: (filePath) {
                     final fileName = p.basename(filePath);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => PlayerScreen(
-                          filePath: filePath,
-                          title: fileName,
-                        ),
+                    showModalBottomSheet(
+                      context: context,
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
                       ),
+                      builder: (context) {
+                        return SafeArea(
+                          child: Wrap(
+                            children: [
+                              ListTile(
+                                leading: const Icon(Icons.play_circle_outline),
+                                title: const Text('Assistir no App (Savee)'),
+                                onTap: () {
+                                  Navigator.pop(context);
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => PlayerScreen(
+                                        filePath: filePath,
+                                        title: fileName,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                              ListTile(
+                                leading: const Icon(Icons.photo_library_outlined),
+                                title: const Text('Abrir na Galeria do Celular'),
+                                subtitle: const Text('Ideal para editar, recortar ou compartilhar'),
+                                onTap: () {
+                                  Navigator.pop(context);
+                                  StorageService.openInGallery(filePath);
+                                },
+                              ),
+                            ],
+                          ),
+                        );
+                      },
                     );
                   },
                 ),
