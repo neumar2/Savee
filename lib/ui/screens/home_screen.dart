@@ -314,7 +314,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             const SizedBox(height: 16),
             Center(
               child: Text(
-                "Savee v1.0.0",
+                "Savee v1.1.0",
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: theme.colorScheme.onSurface,
